@@ -4,11 +4,9 @@ import { marked } from "marked";
 
 // UPDATED: Correct model URL
 
-const apiKey ="AIzaSyA0WNVA-yyD87ePQoN3OQleh5GgHQ11DUI"; // The environment will automatically inject the key here. If running locally, paste your key here.
-const apiurl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-console.log("Loaded API Key:", apiKey);
-
 export const ChatbotSidebar = ({ isOpen, onClose }) => {
+  const apiKey =import.meta.env.VITE_GEMINI_API_KEY; // The environment will automatically inject the key here. If running locally, paste your key here.
+  const apiurl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
   const [messages, setMessages] = useState([
     {
       id: "1",
