@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import hiddenGemsRoutes from './routes/hiddenGems.js';
+import generateRoutes from './routes/generate.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/hidden-gems', hiddenGemsRoutes);
+app.use('/api/generate', generateRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
