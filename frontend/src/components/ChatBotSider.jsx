@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Send, Bot, User } from "lucide-react";
 import { marked } from "marked";
-
-// UPDATED: Correct model URL
+import { aiApi } from "@/lib/api"; // Import your backend API helper
 
 export const ChatbotSidebar = ({ isOpen, onClose }) => {
-  const apiKey =import.meta.env.VITE_GEMINI_API_KEY; // The environment will automatically inject the key here. If running locally, paste your key here.
-  const apiurl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
   const [messages, setMessages] = useState([
     {
       id: "1",
@@ -32,41 +29,16 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
   }, [messages]);
 
   const getBotResponse = async (userMessage) => {
-    const systemPrompt =
-        "You are 'Delhi Darshan AI', a friendly Delhi tourism guide. ALWAYS respond in clean Markdown format using headings, bold text, bullet points, and emojis. Keep answers structured, readable, and helpful.";
-
     try {
-      const response = await fetch(apiurl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: userMessage }]
-            }
-          ],
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        console.error("API Response:", err);
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      return (
-        result?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "Couldn't process your request. Try again!"
-      );
+      // Call the backend instead of Google directly
+      const response = await aiApi.generateDescription(userMessage);
+      
+      // The backend returns { result: "..." }
+      return response.result || "I couldn't process that request.";
 
     } catch (error) {
-      console.error("Gemini API Error:", error);
-      return "I’m having trouble reaching Google servers right now.";
+      console.error("AI API Error:", error);
+      return "I'm having trouble connecting to the server right now. Please try again later.";
     }
   };
 
@@ -84,6 +56,7 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
     setInputValue("");
     setIsTyping(true);
 
+    // Call the updated function
     const botResponse = await getBotResponse(userMessage.content);
 
     const botMessage = {
@@ -100,14 +73,13 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-[65px] h-[calc(100vh-65px)] w-90 bg-[#10101b] border-l border-slate-800 shadow-lg z-50 animate-slide-in">
+    <div className="fixed right-0 top-[65px] h-[calc(100vh-65px)] w-80 md:w-96 bg-[#10101b] border-l border-slate-800 shadow-lg z-50 animate-slide-in">
       <div className="flex flex-col h-full">
 
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center">
-              {/* Fallback icon if image fails */}
               <Bot className="h-5 w-5 text-amber-400" />
             </div>
             <div>
@@ -139,7 +111,7 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
               }`}
             >
               <div
-                className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${
                   message.isBot
                     ? "bg-amber-600 text-white"
                     : "bg-slate-700 text-slate-200"
@@ -152,7 +124,7 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
                 )}
               </div>
 
-              <div className="max-w-[80%]">
+              <div className={`max-w-[85%] ${!message.isBot && "mr-2"}`}>
                 <div
                   className={`p-3 rounded-lg ${
                     message.isBot
@@ -160,13 +132,13 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
                       : "bg-amber-600 text-white"
                   }`}
                 >
-                <div
-                    className="text-sm prose prose-invert"
+                  <div
+                    className="text-sm prose prose-invert max-w-none leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: marked.parse(message.content) }}
-                ></div>
+                  ></div>
                 </div>
                 <p
-                  className={`text-xs text-slate-500 mt-1 ${
+                  className={`text-[10px] text-slate-500 mt-1 ${
                     !message.isBot && "text-right"
                   }`}
                 >
@@ -196,7 +168,7 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 bg-[#10101b]">
           <div className="flex space-x-2">
             <input
               value={inputValue}
@@ -204,12 +176,12 @@ export const ChatbotSidebar = ({ isOpen, onClose }) => {
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               placeholder="Ask about Delhi…"
               disabled={isTyping}
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-amber-500 outline-none placeholder:text-slate-500"
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isTyping}
-              className="px-3 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:bg-slate-700 flex items-center justify-center"
+              className="px-3 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:bg-slate-700 disabled:text-slate-500 transition-colors flex items-center justify-center"
             >
               <Send className="h-4 w-4" />
             </button>

@@ -4,7 +4,6 @@ import HiddenGemCard from "@/components/HiddenGemCard";
 import HiddenGemsSubmit from "@/components/HiddenGemsSubmit";
 import GoogleMapComponent from "@/components/GoogleMapComponent";
 import { getPhotoForPlace, geocodeAddress } from '@/lib/placeService';
-import { MapPin } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
 import { hiddenGemsApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -22,58 +21,60 @@ export const HiddenGems = () => {
   const fetchGems = async () => {
     try {
       setLoading(true);
-      console.log('Fetching hidden gems...');
       const response = await hiddenGemsApi.getAll();
-      console.log('Response:', response);
       const gemsData = response.gems || [];
-      console.log('Gems data:', gemsData);
 
-      if (!gemsData || gemsData.length === 0) {
-        console.warn('No gems returned from API');
-      }
-
+      // 1. Set initial state using DB data (Preserve the DB image!)
       setGems(gemsData.map(g => ({
         ...g,
         submittedBy: g.user?.email || 'Anonymous',
-        image: null,
+        // FIX: Use the image from DB if it exists, otherwise null
+        image: g.image || null, 
       })));
 
-      // Fetch photos for each gem
+      // 2. Fetch fallback photos ONLY for gems that don't have a user-uploaded image
       gemsData.forEach((gem, idx) => {
-        getPhotoForPlace(gem.name, gem.lat, gem.lng, (url) => {
-          if (url) {
-            setGems((prev) => {
-              const copy = [...prev];
-              if (copy[idx]) {
-                copy[idx] = { ...copy[idx], image: url };
-              }
-              return copy;
-            });
-          }
-        });
+        if (!gem.image) { 
+          getPhotoForPlace(gem.name, gem.lat, gem.lng, (url) => {
+            if (url) {
+              setGems((prev) => {
+                const copy = [...prev];
+                // Check if index still exists to prevent race conditions
+                if (copy[idx]) {
+                  copy[idx] = { ...copy[idx], image: url };
+                }
+                return copy;
+              });
+            }
+          });
+        }
       });
     } catch (error) {
       console.error('Error fetching gems:', error);
-      console.error('API URL:', import.meta.env.VITE_API_URL);
-      toast.error('Failed to load hidden gems: ' + error.message);
+      toast.error('Failed to load hidden gems');
     } finally {
       setLoading(false);
     }
   };
 
   const addGemToState = (newGem) => {
+    // 3. Add new gem to top of list
     setGems((prev) => [newGem, ...prev]);
 
-    // fetch photo
-    getPhotoForPlace(newGem.name, newGem.lat, newGem.lng, (url) => {
-      if (url) {
-        setGems((prev) => {
-          const copy = [...prev];
-          copy[0] = { ...copy[0], image: url };
-          return copy;
-        });
-      }
-    });
+    // Only try to fetch a Google photo if the user didn't upload one
+    if (!newGem.image) {
+      getPhotoForPlace(newGem.name, newGem.lat, newGem.lng, (url) => {
+        if (url) {
+          setGems((prev) => {
+            const copy = [...prev];
+            if (copy[0].id === newGem.id) {
+               copy[0] = { ...copy[0], image: url };
+            }
+            return copy;
+          });
+        }
+      });
+    }
   };
 
   const handleAdd = async (payload) => {
@@ -84,7 +85,8 @@ export const HiddenGems = () => {
     }
 
     try {
-      const { name, description, address, lat, lng } = payload;
+      // FIX: Destructure 'image' from payload
+      const { name, description, address, lat, lng, image } = payload;
       
       if (!name) {
         toast.error('Name is required');
@@ -95,12 +97,11 @@ export const HiddenGems = () => {
       let finalLng = lng;
       let finalAddress = address;
 
-      // If we have coordinates, use them directly
+      // Logic to handle coordinates/geocoding
       if (lat && lng) {
         finalLat = typeof lat === 'string' ? parseFloat(lat) : lat;
         finalLng = typeof lng === 'string' ? parseFloat(lng) : lng;
       } else if (address) {
-        // Geocode the address
         const geocodePromise = new Promise((resolve) => {
           geocodeAddress(address, (res) => {
             if (res) {
@@ -111,27 +112,27 @@ export const HiddenGems = () => {
             resolve();
           });
         });
-
         await geocodePromise;
       }
 
-      // Create the gem on the backend
+      // FIX: Include 'image' in the API call object
       const response = await hiddenGemsApi.create({
         name,
         description,
         address: finalAddress || address || '',
         lat: finalLat,
         lng: finalLng,
+        image: image, // Pass the Supabase URL here
       });
 
       const newGem = {
         ...response.gem,
         submittedBy: response.gem.user?.email || 'Anonymous',
-        image: null,
+        // Ensure we use the image returned from backend
+        image: response.gem.image || image || null, 
       };
 
       addGemToState(newGem);
-      toast.success('Hidden gem shared successfully!');
     } catch (error) {
       console.error('Error adding gem:', error);
       toast.error(error.message || 'Failed to share hidden gem');
@@ -178,7 +179,7 @@ export const HiddenGems = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {gems.map((gem, index) => (
-            <HiddenGemCard key={index} {...gem} />
+            <HiddenGemCard key={gem.id || index} {...gem} />
           ))}
         </div>
 

@@ -1,4 +1,4 @@
-const API_URL = `https://dilli-darshan.onrender.com` ;
+const API_URL ="https://delhi-darshan.onrender.com" ;
 
 export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('authToken');
@@ -63,5 +63,14 @@ export const hiddenGemsApi = {
   delete: (id) =>
     apiCall(`/api/hidden-gems/${id}`, {
       method: 'DELETE',
+    }),
+};
+
+// AI endpoints
+export const aiApi = {
+  generateDescription: (prompt) => 
+    apiCall('/api/generate', { 
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
     }),
 };

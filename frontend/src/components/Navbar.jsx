@@ -39,8 +39,8 @@ export function Navbar() {
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-2 relative">
+          {/* Desktop Navigation (Visible only on Large screens) */}
+          <div className="hidden lg:flex items-center space-x-2 relative">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -70,8 +70,8 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Auth Section */}
-          <div className="hidden md:flex items-center">
+          {/* Auth Section (Visible only on Large screens) */}
+          <div className="hidden lg:flex items-center">
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <p className="text-sm font-medium text-gray-800">{user?.email}</p>
@@ -94,10 +94,10 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile/Tablet menu button (Visible on screens smaller than lg) */}
           <button
             onClick={toggleMenu}
-            className="md:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+            className="lg:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isMenuOpen ? (
@@ -119,9 +119,9 @@ export function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile/Tablet Menu Dropdown */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
+          <div className="lg:hidden border-t border-gray-200 bg-white">
             <div className="px-2 pt-2 pb-3 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
